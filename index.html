@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFTERMINDS | AI Background Remover</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --pink-light: #fdf2f8;
+            --blue-light: #eff6ff;
+            --accent-blue: #3b82f6;
+            --brand-gradient: linear-gradient(135deg, #ec4899 0%, #3b82f6 100%);
+            --glass: rgba(255, 255, 255, 0.75);
+            --text-dark: #0f172a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, var(--pink-light) 0%, #ffffff 50%, var(--blue-light) 100%);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* 2D Background Animation */
+        .bg-blobs { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4; animation: float 12s infinite ease-in-out; }
+        .blob-1 { width: 500px; height: 500px; background: #fbcfe8; top: -10%; left: -5%; }
+        .blob-2 { width: 450px; height: 450px; background: #bfdbfe; bottom: -5%; right: -5%; animation-delay: -6s; }
+        @keyframes float { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, 50px) scale(1.1); } }
+
+        /* Navbar */
+        nav { width: 100%; max-width: 1200px; padding: 2.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: var(--text-dark); letter-spacing: -1px; }
+        .logo span { background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Hero */
+        header { text-align: center; padding: 3rem 1rem; }
+        header h1 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 1rem; line-height: 1.1; }
+        header h1 span { color: var(--accent-blue); }
+        header p { color: #64748b; font-size: 1.1rem; font-weight: 500; }
+
+        /* Main App Card */
+        .app-card {
+            width: 90%; max-width: 900px; background: var(--glass); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 40px; padding: 3rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); margin-bottom: 4rem;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed #cbd5e1; border-radius: 30px; padding: 6rem 2rem; cursor: pointer; transition: 0.3s;
+            background: rgba(255, 255, 255, 0.3); display: flex; flex-direction: column; align-items: center;
+        }
+        .upload-zone:hover { border-color: var(--accent-blue); background: white; transform: translateY(-3px); }
+        .icon-circle { width: 70px; height: 70px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem; color: var(--accent-blue); }
+
+        /* Loader */
+        #loader { display: none; flex-direction: column; align-items: center; padding: 3rem; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #f1f5f9; border-top: 5px solid var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Comparison Slider */
+        .slider-container {
+            display: none; position: relative; width: 100%; height: 450px; border-radius: 25px; overflow: hidden;
+            border: 6px solid white; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+        .slider-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+        .slider-after { z-index: 2; clip-path: inset(0 0 0 50%); background: white; background-image: conic-gradient(#e5e7eb 90deg, #fff 0 180deg, #e5e7eb 0 270deg, #fff 0); background-size: 20px 20px; }
+        
+        .slider-input {
+            position: absolute; -webkit-appearance: none; appearance: none; width: 100%; height: 100%;
+            background: transparent; outline: none; z-index: 3; cursor: col-resize; margin: 0;
+        }
+        .slider-input::-webkit-slider-thumb { -webkit-appearance: none; width: 4px; height: 450px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.3); }
+
+        /* Options Bar */
+        .options-bar {
+            display: none; margin-top: 2.5rem; background: rgba(255,255,255,0.5); padding: 2rem; border-radius: 25px;
+            justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;
+        }
+        .option-group { display: flex; flex-direction: column; gap: 6px; }
+        .option-group label { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+        select { padding: 10px 15px; border-radius: 12px; border: 1px solid #cbd5e1; font-family: inherit; font-weight: 600; outline: none; cursor: pointer; }
+
+        .btn-download {
+            padding: 1.1rem 2.5rem; background: var(--brand-gradient); color: white; border-radius: 16px;
+            font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: 0.3s;
+            display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3);
+        }
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 20px 35px rgba(59, 130, 246, 0.4); }
+
+        footer { margin-top: auto; padding: 3rem; color: #94a3b8; font-size: 0.8rem; font-weight: 700; letter-spacing: 1px; }
+
+        @media (max-width: 600px) { .slider-container { height: 320px; } .options-bar { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <nav>
+        <div class="logo"><span>AFTERMINDS</span></div>
+        <div style="font-size: 0.7rem; font-weight: 800; color: #ec4899; letter-spacing: 2px;">PRO STUDIO</div>
+    </nav>
+
+    <header>
+        <h1>Professional <span>Background Removal.</span></h1>
+        <p>Studio-quality AI processing for maximum privacy and clarity.</p>
+    </header>
+
+    <div class="app-card">
+        <!-- Step 1: Upload -->
+        <label for="file-input" id="upload-view" class="upload-zone">
+            <div class="icon-circle"><i data-lucide="layers"></i></div>
+            <h2 style="margin-bottom: 0.5rem;">Select an image</h2>
+            <p style="color: #64748b; font-weight: 500;">Click to browse or drop files here</p>
+            <input type="file" id="file-input" style="display: none;" accept="image/*">
+        </label>
+
+        <!-- Step 2: Loading -->
+        <div id="loader">
+            <div class="spinner"></div>
+            <h3 id="load-status" style="color: var(--accent-blue);">AI is thinking...</h3>
+            <p style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">Analyzing pixels for high-definition removal</p>
+        </div>
+
+        <!-- Step 3: Result -->
+        <div id="result-view" style="display: none;">
+            <div class="slider-container">
+                <img id="img-before" class="slider-img">
+                <img id="img-after" class="slider-img slider-after">
+                <input type="range" min="0" max="100" value="50" class="slider-input" id="slider-range">
+            </div>
+
+            <div class="options-bar" id="options-bar" style="display: flex;">
+                <div class="option-group">
+                    <label>File Format</label>
+                    <select id="format">
+                        <option value="image/png">PNG (Transparent)</option>
+                        <option value="image/jpeg">JPG (White Background)</option>
+                    </select>
+                </div>
+                <div class="option-group">
+                    <label>Export Quality</label>
+                    <select id="quality">
+                        <option value="1.0">Original HD</option>
+                        <option value="0.9">High Quality</option>
+                        <option value="0.8">Standard</option>
+                    </select>
+                </div>
+                <button id="download-btn" class="btn-download"><i data-lucide="download"></i> Download HD</button>
+            </div>
+            <button onclick="location.reload()" style="margin-top: 2rem; background: none; border: none; color: #94a3b8; font-weight: 700; cursor: pointer; text-decoration: underline; font-size: 0.75rem;">UPLOAD NEW IMAGE</button>
+        </div>
+    </div>
+
+    <footer>
+        SECURE ON-DEVICE IMAGE PROCESSING
+    </footer>
+
+    <script type="module">
+        import imglyRemoveBackground from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/+esm';
+
+        const fileInput = document.getElementById('file-input');
+        const uploadView = document.getElementById('upload-view');
+        const loader = document.getElementById('loader');
+        const resultView = document.getElementById('result-view');
+        const loadStatus = document.getElementById('load-status');
+        const sliderRange = document.getElementById('slider-range');
+        const imgAfter = document.getElementById('img-after');
+        const downloadBtn = document.getElementById('download-btn');
+
+        lucide.createIcons();
+
+        sliderRange.addEventListener('input', (e) => {
+            imgAfter.style.clipPath = `inset(0 0 0 ${e.target.value}%)`;
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            uploadView.style.display = 'none';
+            loader.style.display = 'flex';
+            document.getElementById('img-before').src = URL.createObjectURL(file);
+
+            try {
+                const config = {
+                    publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/',
+                    progress: (key, current, total) => {
+                        const p = Math.round((current / total) * 100);
+                        loadStatus.innerText = `Processing: ${p}%`;
+                    }
+                };
+
+                const resultBlob = await imglyRemoveBackground(file, config);
+                const resultUrl = URL.createObjectURL(resultBlob);
+
+                imgAfter.src = resultUrl;
+                downloadBtn.onclick = () => exportImage(resultBlob);
+
+                loader.style.display = 'none';
+                resultView.style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                alert("Please use a modern browser (Chrome/Edge/Brave).");
+                location.reload();
+            }
+        });
+
+        async function exportImage(blob) {
+            const format = document.getElementById('format').value;
+            const quality = parseFloat(document.getElementById('quality').value);
+            
+            if (format === 'image/png' && quality === 1.0) {
+                triggerDownload(URL.createObjectURL(blob), 'clearcut_hd.png');
+                return;
+            }
+
+            const img = new Image();
+            img.src = URL.createObjectURL(blob);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+
+                if (format === 'image/jpeg') {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                ctx.drawImage(img, 0, 0);
+                triggerDownload(canvas.toDataURL(format, quality), `clearcut_export.${format.split('/')[1]}`);
+            };
+        }
+
+        function triggerDownload(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+    </script>
+</body>
+</html>
